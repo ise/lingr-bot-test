@@ -1,13 +1,12 @@
-import collection.mutable.ArrayBuffer
 import scala.io.Source
-import ch.epfl.lamp.fjbg.JField
+import scala.util.Random
+import collection.mutable.ArrayBuffer
+import xml.XML
+
 import org.scalatra._
 import com.mongodb.casbah.Imports._
-import scala.util.parsing.json.JSON
 import net.liftweb.json._
-import net.liftweb.json.JsonAST.JField
-import scala.util.Random
-import xml.XML
+
 
 class LingrBotTest extends ScalatraServlet {
   //val mongo = MongoConnection("localhost",27017)("lingr-bot-test")("places")
