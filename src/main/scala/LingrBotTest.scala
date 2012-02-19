@@ -1,26 +1,30 @@
+import collection.mutable.ArrayBuffer
+import scala.io.Source
 import ch.epfl.lamp.fjbg.JField
 import org.scalatra._
 import com.mongodb.casbah.Imports._
 import scala.util.parsing.json.JSON
 import net.liftweb.json._
 import net.liftweb.json.JsonAST.JField
+import scala.util.Random
+import xml.XML
 
 class LingrBotTest extends ScalatraServlet {
-
-  //setup Casbah connection
   //val mongo = MongoConnection("localhost",27017)("lingr-bot-test")("places")
+  val rand = new Random(System.currentTimeMillis());
   
   post("/message") {
     val json = parse(request.body)
-    val text = (json \\ "events" \ "message" \ "text").toString
-    val nickname = (json \\ "events" \ "message" \ "nickname").toString
-    //パラメータを受け取る
-    //json parse
-    //お腹空いた => localsearch api
-    //今新宿にいる => place保存
-    //なんか見たい => tokyo art beat api
-    //他 => default
-    text + " by " + nickname
+    try {
+      val msg = (json \\ "events" \ "message").values.asInstanceOf[Map[String,String]]
+      //println(msg("text") + " by " + msg("nickname"))
+
+      response.setStatus(200)
+      response.addHeader("Content-type","text/plain")
+      renderResponse(getResponse(msg("text")))
+    } catch {
+      case e:ClassCastException =>
+    }
   }
 
   get("/test") {
@@ -29,7 +33,7 @@ class LingrBotTest extends ScalatraServlet {
      "status" : "ok",
      "counter":208,
      "events":[
-      {"event_id":208
+      {"event_id":208,
        "message":
         {"id":82,
          "room":"myroom",
@@ -42,34 +46,53 @@ class LingrBotTest extends ScalatraServlet {
          "timestamp":"2011-02-12T08:13:51Z",
          "local_id":"pending-UBDH84-1"}}]}"""
     val json = parse(data)
-    val text = (json \\ "events" \ "message" \ "text").toString
-    val nickname = (json \\ "events" \ "message" \ "nickname").toString
-    println(text)
-    println(nickname)
-  }
+    val msg = (json \\ "events" \ "message").values.asInstanceOf[Map[String,String]]
+    println(msg)
 
-  /*
-  post("/msgs") {
-    val builder = MongoDBObject.newBuilder
-    params.get("body").foreach(msg => {
-      builder += ("body" -> msg)
-      mongo += builder.result
-    })
-    redirect("/msgs")
+    println(getResponse("お腹空いた"))
+    println(getResponse("どっか行きたい"))
+    println(getResponse("こんにちは"))
   }
   
-  get("/msgs") {
-    <body>
-      <ul>
-        {for (msg <- mongo) yield <li>{msg.get("body")}</li>}
-      </ul>
-      <form method="POST" action="/msgs">
-        <input type="text" name="body"/>
-        <input type="submit"/>
-      </form>
-    </body>  
+  def getResponse(message: String): String = {
+    def getRestaurant(): String = {
+      val url = "http://search.olp.yahooapis.jp/OpenLocalPlatform/V1/localSearch?appid=cV8qsbmxg67L0Z7MV1B7vtwGTL5uf2wHPQhZPkam8Wfjp_.7SpgzAEn9cID00NXUcpqY&results=10&output=json&gc=01&ac=13"
+      val source = Source.fromURL(url, "utf-8")
+      val json = parse(source.getLines.mkString)
+      var results = new ArrayBuffer[String]
+      (json \\ "Feature").children.foreach(f => {
+        results += "%s http://loco.yahoo.co.jp/place/%s/".format(
+          (f \ "Name").values,
+          (f \ "Property" \ "Uid").values
+        )
+      })
+      val i = rand.nextInt(results.length)
+      results(i)
+    }
+    def getEvent(): String = {
+      val url = "http://www.tokyoartbeat.com/list/event_searchNear?Latitude=35.671208&Longitude=139.76517&SortOrder=mostpopular&SearchRange=3000m"
+      val s = Source.fromURL(url, "utf-8")
+      val xml = XML.loadString(s.getLines.mkString)
+      var results = new ArrayBuffer[String]
+      (xml \ "Event").foreach(event => {
+        val eventUrl = (event \ "@href").text
+        (event \ "_").foreach(
+          _ match {
+            case <Name>{name}</Name> => results += "%s %s".format(name, eventUrl)
+            case _ => Unit
+          })
+      })
+      val i = rand.nextInt(results.length)
+      results(i)
+    }
+    val restPat = """.*お腹空いた.*""".r
+    val eventPat = """.*どっか行きたい.*""".r
+    message match {
+      case restPat() => getRestaurant() + " とかどうでしょう"
+      case eventPat() => getEvent() + " とかどうでしょう"
+      case _ => message + "？"
+    }
   }
-  */
 
 }
 
