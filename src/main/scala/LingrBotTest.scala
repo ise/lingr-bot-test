@@ -23,7 +23,11 @@ class LingrBotTest extends ScalatraServlet {
       response.addHeader("Content-type","text/plain")
       renderResponse(getResponse(msg("text")))
     } catch {
-      case e:ClassCastException =>
+      case e:Exception => {
+        response.setStatus(500)
+        response.addHeader("Content-type","text/plain")
+        renderResponse("Internal Server Error")
+      }
     }
   }
 
