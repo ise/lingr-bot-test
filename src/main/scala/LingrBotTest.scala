@@ -18,13 +18,13 @@ class LingrBotTest extends ScalatraServlet {
       val msg = (json \\ "events" \ "message").values.asInstanceOf[Map[String,String]]
       //println(msg("text") + " by " + msg("nickname"))
 
-      response.setStatus(200)
-      response.addHeader("Content-type","text/plain")
+      contentType = "text/plain"
+      status(200)
       renderResponse(getResponse(msg("text")))
     } catch {
       case e:Exception => {
-        response.setStatus(500)
-        response.addHeader("Content-type","text/plain")
+        contentType = "text/plain"
+        status(500)
         renderResponse("Internal Server Error")
       }
     }
